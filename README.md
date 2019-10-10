@@ -18,12 +18,19 @@ extract_vup extracts certain vup values from HITRAN dataset
 ## Usage
 
 ```python
-from slabspec import write_flux_file
+from slabspec import extract_hitran_data, calc_fluxes
 
-    out_all=extract_hitran_data('CO',4.6,5.2) 
-    lineflux_data=extract_vup(out_all,1)
-    size=np.size(lineflux_data)
-    flux_table=calc_fluxes(wave,flux)
+#Read in HITRAN data
+out_all=extract_hitran_data('CO',4.6,5.2)  #astropy table
+lineflux_data=extract_vup(out_all,1)
+
+#Read in spectral data
+data=pd.read_csv('reduced_spectra/nirspec_lkha330_glue.dat', header=26,names=['wave','flux'],
+                 skipinitialspace=True,sep=' ')
+wave=data['wave']
+flux=data['flux']
+
+out=calc_fluxes(wave,flux,lineflux_data,fwhm_v=17., sep_v=80., cont=1.12,vet_fits=False, plot=True, v_dop=15.)
 ```
 
 ## License
