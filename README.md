@@ -13,12 +13,14 @@ Requires the molmass and astropy packages
 
 ## Functions
 extract_hitran_data extracts relevant data from HITRAN database
+
 calc_fluxes calculates and writes fluxes
+
 extract_vup extracts certain vup values from HITRAN dataset
 ## Usage
 
 ```python
-from slabspec import extract_hitran_data, calc_fluxes
+from slabspec import extract_hitran_data, calc_fluxes, extract_vup
 
 #Read in HITRAN data
 out_all=extract_hitran_data('CO',4.6,5.2)  #astropy table
