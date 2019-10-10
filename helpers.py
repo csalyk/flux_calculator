@@ -5,21 +5,121 @@ from astropy.constants import c, k_B, h, u
 from molmass import Formula
 from astropy import units as un
 from scipy.optimize import curve_fit
+import pdb as pdb
+
+def convert_quantum_strings(hitran_data):
+    '''
+    Converts Vp, Vpp, Qp and Qpp quantum number strings to more useful format for analysis.
+    Takes HITRAN values and saves them to new fields, e.g., 'Vp_HITRAN'
+   
+    Parameters
+    ------------
+    hitran_data : astropy table
+    astropy table containing HITRAN data
+
+    molecule_name : string
+    Moleule name, e.g., 'CO'
+
+    Returns
+    ----------
+    hitran_data : astropy table
+    astropy table containing converted quantum number fields
+    '''
+    nlines=np.size(hitran_data)
+    hitran_data.rename_column('Vp','Vp_HITRAN')
+    hitran_data.rename_column('Vpp','Vpp_HITRAN')
+    hitran_data.rename_column('Qp','Qp_HITRAN')
+    hitran_data.rename_column('Qpp','Qpp_HITRAN')
+    hitran_data['Vup']=np.zeros(nlines)
+    hitran_data['Vlow']=np.zeros(nlines)
+    hitran_data['Qup']=np.zeros(nlines)
+    hitran_data['Qlow']=np.zeros(nlines)
+    for i,myvp in enumerate(hitran_data['Vp_HITRAN']):
+        if(hitran_data['molec_id'][i]==5):
+            hitran_data['Vup'][i]=np.int(myvp)  #Upper level vibrational state
+            hitran_data['Vlow'][i]=np.int(hitran_data['Vpp_HITRAN'][i])   #Lower level vibrational state
+            type=(hitran_data['Qpp_HITRAN'][i].split())[0]   #Returns P or R  
+            num=np.int((hitran_data['Qpp_HITRAN'][i].split())[1])
+            hitran_data['Qlow'][i]=num  #Lower level Rotational state
+            if(type=='P'): 
+                hitran_data['Qup'][i]=num-1  #Upper level Rotational state for P branch
+            if(type=='R'): 
+                hitran_data['Qup'][i]=num+1  #Upper level Rotational state for R branch
+
+    return hitran_data     
+
+
+def strip_superfluous_hitran_data(hitran_data):
+    '''
+    Strips hitran_data astropy table of columns superfluous for IR astro spectroscopy
+
+    Parameters
+    ----------
+    hitran_data : astropy table
+    HITRAN data extracted by extract_hitran_data.  Contains all original columns from HITRAN.
+
+    Returns    
+    ----------
+    hitran_data : astropy table
+    HITRAN data stripped of some superfluous columns
+    '''
+
+    del hitran_data['sw']
+    del hitran_data['gamma_air']
+    del hitran_data['gamma_self']
+    del hitran_data['n_air']
+    del hitran_data['delta_air']
+    del hitran_data['ierr1']
+    del hitran_data['ierr2']
+    del hitran_data['ierr3']
+    del hitran_data['ierr4']
+    del hitran_data['ierr5']
+    del hitran_data['ierr6']
+    del hitran_data['iref1']
+    del hitran_data['iref2']
+    del hitran_data['iref3']
+    del hitran_data['iref4']
+    del hitran_data['iref5']
+    del hitran_data['iref6']
+    del hitran_data['line_mixing_flag']
+    return hitran_data        
+
+
+def calc_linewidth(p,perr=None):
+    '''
+    Given Gaussian fit to Flux vs. wavelength in microns, find line width in km/s
+   
+    Parameters
+    ----------
+    p : numpy array
+    parameters from Gaussian fit
+    
+    Returns                                                        
+    ---------                                                             
+    linewidth : float
+    linewidth in km/s (FWHM) 
+
+    '''
+    linewidth_err=0*un.km/un.s
+    linewidth=sigma_to_fwhm(p[2]/p[1]*c.value*1e-3*un.km/un.s)
+    if(perr is not None): linewidth_err=sigma_to_fwhm(perr[2]/p[1]*c.value*1e-3*un.km/un.s)
+
+    return (linewidth, linewidth_err)
 
 def gauss3(x, a0, a1, a2):
-   z = (x - a1) / a2
-   y = a0 * np.exp(-z**2 / 2.)
-   return y
+    z = (x - a1) / a2
+    y = a0 * np.exp(-z**2 / 2.)
+    return y
 
 def gauss4(x, a0, a1, a2, a3):
-   z = (x - a1) / a2
-   y = a0 * np.exp(-z**2 / 2.) + a3
-   return y
+    z = (x - a1) / a2
+    y = a0 * np.exp(-z**2 / 2.) + a3
+    return y
 
 def gauss5(x, a0, a1, a2, a3, a4):
-   z = (x - a1) / a2
-   y = a0 * np.exp(-z**2 / 2.) + a3 + a4 * x
-   return y
+    z = (x - a1) / a2
+    y = a0 * np.exp(-z**2 / 2.) + a3 + a4 * x
+    return y
 
 def line_fit(wave,flux,nterms=4,p0=None,bounds=None):
     '''
@@ -41,16 +141,16 @@ def line_fit(wave,flux,nterms=4,p0=None,bounds=None):
     fit_func=options[nterms]
     try:
         if(bounds is not None):
-            fitparameters, fitcovariance = curve_fit(fit_func, wave, flux, p0=p0,bounds=bounds)
+            fitparameters, fitcovariance = curve_fit(fit_func, wave, flux, p0=p0,bounds=bounds,absolute_sigma=True)
         else:
-            fitparameters, fitcovariance = curve_fit(fit_func, wave, flux, p0=p0)
+            fitparameters, fitcovariance = curve_fit(fit_func, wave, flux, p0=p0,absolute_sigma=True)
     except RuntimeError:
         print("Error - curve_fit failed")
         return -1
-
+    perr = np.sqrt(np.diag(fitcovariance))
     fitoutput={"yfit":fit_func(wave,*fitparameters),"parameters":fitparameters,
-               "covariance":fitcovariance,"resid":flux-fit_func(wave,*fitparameters)}
-
+               "covariance":fitcovariance,"resid":flux-fit_func(wave,*fitparameters),
+               "parameter_errors":perr}
     return fitoutput
 
 def extract_vup(hitran_data,vup_value):
@@ -85,9 +185,9 @@ def calc_line_flux_from_fit(pfit, sigflux=None):
 #Add error catching for size of p<3 or >5
 
     nufit=c.value/(a1*1e-6)  #Frequency of line, in s-1
-    lineflux=a0*1.e-26*np.sqrt(2*np.pi)*(a2*1.e-6*nufit**2./c.value)*un.W/un.m/un.m
+    lineflux=np.abs(a0)*1.e-26*np.sqrt(2*np.pi)*(np.abs(a2)*1.e-6*nufit**2./c.value)*un.W/un.m/un.m
     if(sigflux is not None):
-        lineflux_err=1.e-26*np.sqrt(2.*np.pi)*1.e-6*nufit**2./c.value*np.sqrt(a2*sigflux)**2.*un.W/un.m/un.m
+        lineflux_err=1.e-26*np.sqrt(2.*np.pi)*1.e-6*nufit**2./c.value*np.abs(a2)*sigflux*un.W/un.m/un.m
     else:
         lineflux_err=None
     return (lineflux,lineflux_err)
@@ -198,6 +298,13 @@ def extract_hitran_data(molecule_name, wavemin, wavemax, isotopologue_number=1, 
      #Combine
     extractbool = (abool & ebool)
     hitran_data=tbl[extractbool]
+
+    hitran_data['a'].unit = '/ s'
+    hitran_data['wn'].unit = '/ cm'
+    hitran_data['nu'].unit = 'Hz'
+    hitran_data['eup_k'].unit = 'K'
+    hitran_data['wave'].unit = 'micron'
+    hitran_data['elower'].unit = '/ cm'
 
     #Return astropy table
     return hitran_data

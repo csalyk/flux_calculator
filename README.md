@@ -13,12 +13,17 @@ Requires the molmass and astropy packages
 
 ## Functions
 extract_hitran_data extracts relevant data from HITRAN database
-
+calc_fluxes calculates and writes fluxes
+extract_vup extracts certain vup values from HITRAN dataset
 ## Usage
 
 ```python
 from slabspec import write_flux_file
-flux_table=write_fluxes(wave,flux)
+
+    out_all=extract_hitran_data('CO',4.6,5.2) 
+    lineflux_data=extract_vup(out_all,1)
+    size=np.size(lineflux_data)
+    flux_table=calc_fluxes(wave,flux)
 ```
 
 ## License
