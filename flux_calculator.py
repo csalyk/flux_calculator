@@ -79,7 +79,8 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
                 lineflux_data['lineflux_err'][i]=lineflux_err.value
                 lineflux_data['linewidth'][i]=np.abs((calc_linewidth(p,perr=perr))[0].value)
                 lineflux_data['linewidth_err'][i]=np.abs((calc_linewidth(p,perr=perr))[1].value)
-                lineflux_data['v_dop_fit'][i]=(p[1]-w0)/c.value*1e-3   #km/s
+                lineflux_data['v_dop_fit'][i]=(p[1]-w0)/w0*c.value*1e-3   #km/s
+                lineflux_data['v_dop_fit_err'][i]=(perr[1])/w0*c.value*1e-3   #km/s
                 lineflux_data['continuum'][i]=(p[3])   #Jy
                 lineflux_data['continuum_err'][i]=(perr[3])   #Jy
 
@@ -122,8 +123,11 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
     lineflux_data['lineflux'].unit = 'W / m2'
     lineflux_data['lineflux_err'].unit = 'W / m2'
     lineflux_data['linewidth'].unit = 'km / s'
+    lineflux_data['linewidth_err'].unit = 'km / s'
     lineflux_data['v_dop_fit'].unit = 'km / s'
+    lineflux_data['v_dop_fit_err'].unit = 'km / s'
     lineflux_data['continuum'].unit = 'Jy'
+    lineflux_data['continuum_err'].unit = 'Jy'
 
     lineflux_data=lineflux_data[goodfit_bool]
 

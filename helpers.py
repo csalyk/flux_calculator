@@ -26,6 +26,8 @@ def convert_quantum_strings(hitran_data):
     astropy table containing converted quantum number fields
     '''
     nlines=np.size(hitran_data)
+    hitran_data.rename_column('gp','gup')
+    hitran_data.rename_column('gpp','glow')
     hitran_data.rename_column('Vp','Vp_HITRAN')
     hitran_data.rename_column('Vpp','Vpp_HITRAN')
     hitran_data.rename_column('Qp','Qp_HITRAN')
