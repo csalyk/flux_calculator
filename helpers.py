@@ -141,9 +141,9 @@ def line_fit(wave,flux,nterms=4,p0=None,bounds=None):
     fit_func=options[nterms]
     try:
         if(bounds is not None):
-            fitparameters, fitcovariance = curve_fit(fit_func, wave, flux, p0=p0,bounds=bounds,absolute_sigma=True)
+            fitparameters, fitcovariance = curve_fit(fit_func, wave, flux, p0=p0,bounds=bounds)
         else:
-            fitparameters, fitcovariance = curve_fit(fit_func, wave, flux, p0=p0,absolute_sigma=True)
+            fitparameters, fitcovariance = curve_fit(fit_func, wave, flux, p0=p0)
     except RuntimeError:
         print("Error - curve_fit failed")
         return -1
