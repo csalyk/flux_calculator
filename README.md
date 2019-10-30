@@ -20,7 +20,7 @@ extract_vup extracts certain vup values from HITRAN dataset
 ## Usage
 
 ```python
-from slabspec import extract_hitran_data, calc_fluxes, extract_vup
+from flux_calculator import extract_hitran_data, calc_fluxes, extract_vup
 
 #Read in HITRAN data
 out_all=extract_hitran_data('CO',4.6,5.2)  #astropy table
