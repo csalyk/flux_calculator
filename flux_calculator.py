@@ -4,7 +4,31 @@ from .helpers import extract_hitran_data, extract_vup, line_fit, calc_linewidth,
 from .helpers import calc_line_flux_from_fit,strip_superfluous_hitran_data, convert_quantum_strings
 import matplotlib.pyplot as plt
 from astropy.constants import c
+from astropy.table import Table
 import pdb as pdb
+
+def make_rotation_diagram(lineflux_data):
+    '''                                                                                                 
+    Take ouput from calc_fluxes and use it to make a rotation diagram    
+                                                                                                        
+    Parameters                                                                                          
+    ---------                                                                                           
+    lineflux_data: astropy Table
+        Output from calc_fluxes
+                                                                                                        
+    Returns                                                                                             
+    --------                                                                                            
+    rot_table: astropy Table                                                                            
+        Table of x and y values for rotation diagram.                                                   
+                                                                                                        
+    '''
+    x=lineflux_data['eup_k']
+    y=np.log(lineflux_data['lineflux']/(lineflux_data['wn']*lineflux_data['gup']*lineflux_data['a']))
+    rot_table = Table([x, y], names=('x', 'y'),  dtype=('f8', 'f8'))
+    rot_table['x'].unit = 'K'
+
+    return rot_table
+
 
 def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=True,vet_fits=False,
                 plot=False,v_dop=0):
@@ -30,11 +54,15 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
         If True, user is prompted to decide if fit is good or not.
     plot: bool, optional - defaults to False
         If True, data and fits are plotted.  If vet_fits=True, this gets set to True automatically.
+    v_dop : float, optional (defaults to 0)
+        Doppler shift in km/s of spectrum relative to vacuum.  Note that this makes no assumptions about
+         reference frame.
 
     Returns                                                                                 
     --------                                                                                
-    newflux : numpy array                                                                   
-        Convolved spectrum flux density values, in same units as input                      
+    lineflux_data : astropy table
+       Table holding both HITRAN data and fit parameters (including flux, line width, and Doppler shift) 
+        for fit lines.  
                                                                                             
     '''
     if(vet_fits==True): 
