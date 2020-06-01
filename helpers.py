@@ -7,7 +7,7 @@ from astropy import units as un
 from scipy.optimize import curve_fit
 import pdb as pdb
 
-def convert_quantum_strings(hitran_data):
+def convert_quantum_strings(hitran_data_in):
     '''
     Converts Vp, Vpp, Qp and Qpp quantum number strings to more useful format for analysis.
     Takes HITRAN values and saves them to new fields, e.g., 'Vp_HITRAN'
@@ -25,6 +25,7 @@ def convert_quantum_strings(hitran_data):
     hitran_data : astropy table
     astropy table containing converted quantum number fields
     '''
+    hitran_data=hitran_data_in.copy()
     nlines=np.size(hitran_data)
     hitran_data.rename_column('gp','gup')
     hitran_data.rename_column('gpp','glow')
@@ -51,7 +52,7 @@ def convert_quantum_strings(hitran_data):
     return hitran_data     
 
 
-def strip_superfluous_hitran_data(hitran_data):
+def strip_superfluous_hitran_data(hitran_data_in):
     '''
     Strips hitran_data astropy table of columns superfluous for IR astro spectroscopy
 
@@ -65,7 +66,7 @@ def strip_superfluous_hitran_data(hitran_data):
     hitran_data : astropy table
     HITRAN data stripped of some superfluous columns
     '''
-
+    hitran_data=hitran_data_in.copy()
     del hitran_data['sw']
     del hitran_data['gamma_air']
     del hitran_data['gamma_self']
