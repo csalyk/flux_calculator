@@ -2,7 +2,6 @@ import numpy as np
 from astroquery.hitran import Hitran
 from astropy import units as un
 from astropy.constants import c, k_B, h, u
-from molmass import Formula
 from astropy import units as un
 from scipy.optimize import curve_fit
 import pdb as pdb
