@@ -31,7 +31,7 @@ def make_rotation_diagram(lineflux_data):
 
 
 def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=True,vet_fits=False,
-                plot=False,v_dop=0,amp=0.1):
+                plot=False,v_dop=0):
     '''                                                                                     
                                                                                             
     Parameters                                                                              
@@ -46,8 +46,6 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
         estimate of line width in km/s for line fitting input
     sep_v : float, optional - defaults to 40 km/s
         total width used for line fits in km/s
-    amp : float, optional - defaults to 0.1
-        estimated amplitude of Gaussian fit
     cont : float, optional - defaults to 1.
         Continuum level, in Jy.
     verbose: bool, optional - defaults to True
@@ -98,7 +96,7 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
             print('Not enough data near ', w0+wdop, ' microns. Skipping.')
             goodfit_bool[i]=False
         if(len(myx) > 5):
-            g=line_fit(myx,myy,nterms=4,p0=[amp,w0+wdop,sig_w,cont])
+            g=line_fit(myx,myy,nterms=4,p0=[0.1,w0+wdop,sig_w,cont])
             if(g!=-1):   #curve fit succeeded
                 p=g['parameters']
                 perr=g['parameter_errors']
