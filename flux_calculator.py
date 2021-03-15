@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from .helpers import extract_hitran_data, extract_vup, line_fit, calc_linewidth, fwhm_to_sigma
-from .helpers import calc_line_flux_from_fit,strip_superfluous_hitran_data, convert_quantum_strings
+from .helpers import calc_line_flux_from_fit,strip_superfluous_hitran_data, convert_quantum_strings,calc_numerical_flux
 import matplotlib.pyplot as plt
 from astropy.constants import c
 from astropy.table import Table
@@ -31,7 +31,7 @@ def make_rotation_diagram(lineflux_data):
 
 
 def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=True,vet_fits=False,
-                plot=False,v_dop=0,amp=0.1):
+                plot=False,v_dop=0,amp=0.1,ymin=None,ymax=None):
     '''                                                                                     
                                                                                             
     Parameters                                                                              
@@ -48,6 +48,10 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
         total width used for line fits in km/s
     amp : float, optional - defaults to 0.1
         estimated amplitude of Gaussian fit
+    ymin : float, optional - defaults to 0+continuum
+        minimum of y axis for plotting
+    ymax : float, optional - defaults to 2+continuum
+        maximum of y axis for plotting
     cont : float, optional - defaults to 1.
         Continuum level, in Jy.
     verbose: bool, optional - defaults to True
@@ -75,6 +79,7 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
     nlines=np.size(lineflux_data)
     #Add new columns to astropy table to hold line fluxes and error bars
     lineflux_data['lineflux']=np.zeros(nlines)  
+    lineflux_data['lineflux_Gaussian']=np.zeros(nlines)  
     lineflux_data['lineflux_err']=np.zeros(nlines)  
     lineflux_data['linewidth']=np.zeros(nlines)
     lineflux_data['linewidth_err']=np.zeros(nlines)
@@ -105,8 +110,10 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
                 resid=g['resid']
                 sigflux=np.sqrt(np.mean(resid**2.))
                 (lineflux,lineflux_err)=calc_line_flux_from_fit(p,sigflux=sigflux)
-                lineflux_data['lineflux'][i]=lineflux.value
+                lineflux_data['lineflux_Gaussian'][i]=lineflux.value
                 lineflux_data['lineflux_err'][i]=lineflux_err.value
+                lineflux_num=calc_numerical_flux(myx,myy,p)
+                lineflux_data['lineflux'][i]=lineflux_num.value
                 lineflux_data['linewidth'][i]=np.abs((calc_linewidth(p,perr=perr))[0].value)
                 lineflux_data['linewidth_err'][i]=np.abs((calc_linewidth(p,perr=perr))[1].value)
                 lineflux_data['v_dop_fit'][i]=(p[1]-w0)/w0*c.value*1e-3   #km/s
@@ -122,9 +129,15 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
                     ax1.plot(myx,g['yfit'],'C2',label='Fit')
                     ax1.axvline(w0+wdop,color='C3',label='Line center')
                     ax1.set_xlim(np.min(myx)-dw2,np.max(myx)+dw2)
+                    if(ymin is None): ymin=np.min(myy)
+                    if(ymax is None): ymax=2+np.min(myy)
+                    ax1.set_ylim(ymin,ymax)
                     ax1.set_xlabel(r'Wavelength [$\mu$m]')
                     ax1.set_ylabel(r'F$_\nu$ [Jy]')
+                    ax1.axvline(p[1]-3*p[2],label='Numerical limit',color='C3',linestyle='--')
+                    ax1.axvline(p[1]+3*p[2],color='C3',linestyle='--')
                     ax1.legend()
+                    ax1.set_title(hitran_data['Qpp'][i])
                     plt.show(block=False)
                     plt.close()    
                 user_input=None
@@ -143,9 +156,13 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
                     ax1.plot(myx,myy,'C1',linestyle='steps-mid',label='Fit data')
                     ax1.axvline(w0+wdop,color='C3',label='Line center')
                     ax1.set_xlim(np.min(myx)-dw2,np.max(myx)+dw2)
+                    if(ymin is None): ymin=np.min(myy)
+                    if(ymax is None): ymax=2+np.min(myy)
+                    ax1.set_ylim(ymin,ymax)
                     ax1.set_xlabel(r'Wavelength [$\mu$m]')
                     ax1.set_ylabel(r'F$_\nu$ [Jy]')
                     ax1.legend()
+                    ax1.set_title(hitran_data['Qpp'][i])
                     plt.show(block=False)
                     plt.pause(0.5)
                     plt.close()    

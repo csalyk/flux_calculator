@@ -163,6 +163,38 @@ def extract_vup(hitran_data,vup_value):
     out=hitran_data[vbool]
     return out
 
+def calc_numerical_flux(myx,myy,pfit, sigflux=None):
+    '''
+    Take parameters from line fit and compute a line flux and error
+
+    Parameters
+    ----------
+    pfit : list
+      fit parameters from Gaussian fit (pfit must have 3-5 elements)
+    sigflux : float
+      rms residual of fit, for computing error on line flux.
+
+    Returns
+    ---------
+    (line flux, lineflux_err) : tuple of astropy quantities
+       The line flux and the line flux error
+    '''
+
+    if(np.size(pfit)==5): [a0,a1,a2,a3,a4]=pfit
+    if(np.size(pfit)==4): [a0,a1,a2,a3]=pfit
+    if(np.size(pfit)==3): 
+        [a0,a1,a2]=pfit
+        a3=0
+
+    nufit=c.value/(a1*1e-6)  #Frequency of line, in s-1
+    myflux=myy-a3
+    myvel=(myx-a1)/a1*c.value
+    maxvel=(3*np.abs(a2))/a1*c.value
+    mybool=(np.abs(myvel)<maxvel)  #3 sigma on either side of line
+    dwave=np.nanmean(np.diff(myx[mybool]))
+    lineflux=np.nansum(myflux[mybool]*dwave)*1e-26*1e-6*nufit**2./c.value*un.W/un.m/un.m
+    return lineflux
+
 def calc_line_flux_from_fit(pfit, sigflux=None):
     '''
     Take parameters from line fit and compute a line flux and error
