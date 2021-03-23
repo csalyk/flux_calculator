@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from astropy.constants import c
 from astropy.table import Table
 import pdb as pdb
+from scipy.interpolate import interp1d
 
 def make_rotation_diagram(lineflux_data):
     '''                                                                                                 
@@ -180,3 +181,63 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
 
     return lineflux_data
     
+
+def make_lineshape(wave,flux, lineflux_data, dv=3., voffset=None,norm=None):
+    '''                                                                                                                                                   
+                                                                                                                                                          
+    Parameters                                                                                                                                            
+    ---------                                                                                                                                             
+    wave : numpy array                                                                                                                                    
+        set of wavelengths for spectrum, in units of microns                                                                                              
+    flux : numpy array                                                                                                                                    
+        set of fluxes for spectrum, in units of Jy                                                                                                        
+    lineflux_data : astropy table                                                                                                                         
+        table in same format as flux_calculator output                                                                                                    
+    dv : float, optional                                                                                                                                  
+        size of velocity grid cell, in units of km/s.  Defaults to 3 km/s.                                                                                
+    voffset : float, optional                                                                                                                             
+        Doppler shift of observed spectrum in km/s.  Defaults to median of lineflux fits.                                                                 
+                                                                                                                                                          
+                                                                                                                                                          
+    Returns                                                                                                                                               
+    ---------                                                                                                                                             
+    (vel,flux) tuple                                                                                                                                      
+                                                                                                                                                          
+    '''
+    w0=np.array(1e4/lineflux_data['wn'])
+
+    nlines=np.size(w0)
+
+    if(voffset is None): voffset=np.median(lineflux_data['v_dop_fit'])    #If Doppler shift is not defined, use median from lineflux_data                 
+    w0*=(1+voffset*1e3/c.value)    #Apply Doppler shift                                                                                                   
+
+    #Make interpolation grid                                                                                                                              
+    nvels=151
+    nlines=np.size(w0)
+    interpvel=np.arange(nvels)*dv-75.*dv
+    interpind=np.zeros((nvels,nlines))+1  #keeps track of weighting for each velocity bin                                                                 
+    interpflux=np.zeros((nvels,nlines))
+
+    #Loop through all w0 values                                                                                                                           
+    for i,my_w0 in enumerate(w0):
+        mywave = wave[(wave > (my_w0-0.003)) & (wave < (my_w0+0.003))]  #Find nearby wavelengths                                                          
+        myflux = flux[(wave > (my_w0-0.003)) & (wave < (my_w0+0.003))]  #Find nearby fluxes                                                               
+        myvel = c.value*1e-3*(mywave - my_w0)/my_w0                     #Convert wavelength to velocity                                                   
+        f1=interp1d(myvel, myflux, kind='linear', bounds_error=False)   #Interpolate onto velocity grid                                                   
+        interpflux[:,i]=f1(interpvel)
+        w=np.where((interpvel > np.max(myvel)) | (interpvel < np.min(myvel)) | (np.isfinite(interpflux[:,i]) != 1 )  ) #remove fluxes beyond edges, NaNs  
+        if(np.size(w) > 0):
+            interpind[w,i]=0
+            interpflux[w,i]=0
+    numer=np.nansum(interpflux,1)
+    denom=np.nansum(interpind,1)
+    mybool=(denom==0)   #Find regions where there is no data                                                                                              
+    numer[mybool]='NaN' #Set to NaN                                                                                                                       
+    denom[mybool]=1
+    interpflux=numer/denom
+
+    if(norm=='Maxmin'):  #Re-normalize if desired                                                                                                         
+        interpflux=(interpflux-np.nanmin(interpflux))/np.nanmax(interpflux-np.nanmin(interpflux))
+
+    return (interpvel,interpflux)
+
