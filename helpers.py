@@ -276,7 +276,7 @@ def wn_to_k(wn):
     '''              
     return wn.si*h*c/k_B
 
-def extract_hitran_data(molecule_name, wavemin, wavemax, isotopologue_number=1, eupmax=None, aupmin=None):
+def extract_hitran_data(molecule_name, wavemin, wavemax, isotopologue_number=1, eupmax=None, aupmin=None,swmin=None,vup=None):
     '''                                                               
     Extract data from HITRAN 
     Primarily makes use of astroquery.hitran, with some added functionality specific to common IR spectral applications
@@ -323,14 +323,23 @@ def extract_hitran_data(molecule_name, wavemin, wavemax, isotopologue_number=1, 
     #Extract desired portion of dataset
     ebool = np.full(np.size(tbl), True, dtype=bool)  #default to True
     abool = np.full(np.size(tbl), True, dtype=bool)  #default to True
+    swbool = np.full(np.size(tbl), True, dtype=bool)  #default to True                                                        
+    vupbool = np.full(np.size(tbl), True, dtype=bool)  #default to True 
     #Upper level energy
     if(eupmax is not None):
         ebool = tbl['eup_k'] < eupmax
     #Upper level A coeff
     if(aupmin is not None):
         abool = tbl['a'] > aupmin
-     #Combine
-    extractbool = (abool & ebool)
+    #Line strength                                                                                                            
+    if(swmin is not None):
+        swbool = tbl['sw'] > swmin
+    if(vup is not None):
+        vupval = [np.int(val) for val in tbl['Vp']]
+        vupbool=(np.array(vupval)==vup)
+
+    #Combine
+    extractbool = (abool & ebool & swbool & vupbool)
     hitran_data=tbl[extractbool]
 
     hitran_data['a'].unit = '/ s'
